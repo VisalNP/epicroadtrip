@@ -1,0 +1,298 @@
+/* src/App.css */
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+.app-container {
+  display: flex;
+  height: 100%;
+}
+
+/* --- Sidebar Styles --- */
+.sidebar {
+  width: 380px;
+  flex-shrink: 0;
+  background-color: #2c2c2c;
+  padding: 25px;
+  box-shadow: 3px 0 8px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  border-right: 1px solid #444;
+}
+
+.location-inputs {
+  margin-bottom: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.location-inputs > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.location-inputs input[type="text"] {
+  padding: 12px 15px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background-color: #383838;
+  color: #e0e0e0;
+  font-size: 1em;
+  outline: none;
+}
+
+.location-inputs input[type="text"]:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.location-inputs button {
+  padding: 10px 15px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95em;
+  transition: background-color 0.2s ease;
+}
+
+.location-inputs button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.location-inputs button:disabled {
+  background-color: #555;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.location-inputs > button.get-directions-main-btn {
+  background-color: #28a745;
+  margin-top: 10px;
+}
+.location-inputs > button.get-directions-main-btn:hover:not(:disabled) {
+  background-color: #1e7e34;
+}
+
+.poi-section {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  min-height: 0;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #444;
+  margin-bottom: 15px;
+  flex-shrink: 0;
+}
+
+.tab-button {
+  padding: 12px 18px;
+  cursor: pointer;
+  border: none;
+  background-color: transparent;
+  color: #bbb;
+  border-bottom: 3px solid transparent;
+  font-size: 0.9em;
+  transition: color 0.2s ease, border-bottom-color 0.2s ease;
+}
+
+.tab-button:hover {
+  color: #fff;
+}
+
+.tab-button.active {
+  border-bottom-color: #007bff;
+  color: #fff;
+  font-weight: 600;
+}
+
+.poi-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #e0e0e0;
+  font-size: 1.1em;
+  border-bottom: 1px solid #444;
+  padding-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.poi-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.poi-list li {
+  padding: 12px 5px;
+  border-bottom: 1px solid #383838;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+.poi-list li:hover {
+  background-color: #333;
+}
+
+.poi-list li > div {
+  flex-grow: 1;
+  margin-right: 10px;
+  overflow: hidden;
+}
+
+.poi-list li strong {
+  color: #e0e0e0;
+  font-size: 1em;
+  display: block;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.poi-list li p {
+  font-size: 0.85em;
+  color: #aaa;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.poi-list li button {
+  padding: 6px 10px;
+  font-size: 0.8em;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.poi-list li button:hover {
+  background-color: #388E3C;
+}
+
+.poi-section > p.status-message {
+  color: #888;
+  text-align: center;
+  margin-top: 20px;
+  padding: 10px;
+}
+
+/* --- Map Area --- */
+.map-area {
+  flex-grow: 1;
+  height: 100%;
+  display: flex;
+}
+
+.map-area > div {
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Top Right Action Buttons Container --- */
+.action-buttons-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Base style for buttons in the action container */
+.view-trip-button {
+  padding: 10px 15px;
+  cursor: pointer;
+  background-color: #007bff; /* Default blue for "Current Trip" */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95em;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+.view-trip-button:hover:not(:disabled) {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+.view-trip-button:disabled {
+    background-color: #555;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* Modifier classes for specific button colors */
+.view-trip-button.saved-trips {
+  background-color: #17a2b8; /* Tealish for Saved Trips */
+}
+.view-trip-button.saved-trips:hover:not(:disabled) {
+  background-color: #117a8b;
+}
+
+.view-trip-button.auth-action {
+  background-color: #6c757d; /* Grey for Login/Register */
+}
+.view-trip-button.auth-action:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.view-trip-button.logout {
+  background-color: #dc3545; /* Red for Logout */
+}
+.view-trip-button.logout:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+
+/* For the new location search input in sidebar */
+.location-inputs > div:nth-child(3) input[type="text"] {
+  margin-bottom: 8px;
+}
+.location-inputs > div:nth-child(3) button {
+  background-color: #6c757d;
+}
+.location-inputs > div:nth-child(3) button:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+/* Styling for the close 'x' on tabs */
+.tab-button span {
+  margin-left: 10px;
+  color: #888;
+  font-weight: bold;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+.tab-button span:hover {
+  color: #ff6b6b;
+  background-color: rgba(255, 107, 107, 0.1);
+}
