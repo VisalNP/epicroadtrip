@@ -12,24 +12,24 @@ const initialMapProps = {
   zoom: 6
 };
 
-const SCRIPT_LIBRARIES = ['places', 'routes'];
+const SCRIPT_LIBRARIES = ['places', 'routes']; // 'routes' is not a standard library, usually 'directions' is part of core or places.
+                                              // Keeping as is, assuming it worked. DirectionsService should work without it.
 
 function MapDisplay({
   origin,
   destination,
   waypoints,
-  pois, // This is the poisForMap from App.js
+  pois,
   directionsResponse,
   setDirectionsResponse
 }) {
-  console.log("MapDisplay: Component RENDERED. Received pois prop:", JSON.parse(JSON.stringify(pois || [])));
-  console.log("MapDisplay: Received origin:", origin, "destination:", destination, "waypoints:", waypoints?.length);
-
+  // ... (keep console.logs if debugging, or remove)
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
-    libraries: SCRIPT_LIBRARIES,
+    libraries: SCRIPT_LIBRARIES.filter(lib => lib !== 'routes'), // Filter out 'routes' if it causes issues, typically not a library name.
+                                                                 // Standard libraries: 'drawing', 'geometry', 'localContext', 'places', 'visualization'
   });
 
   const [map, setMap] = useState(null);
@@ -42,7 +42,7 @@ function MapDisplay({
     if (isLoaded && window.google && status === window.google.maps.DirectionsStatus.OK && response) {
       console.log("MapDisplay: DirectionsService callback OK:", response);
       setDirectionsResponse(response);
-      directionsJustRendered.current = true;
+      directionsJustRendered.current = true; // Set flag when new directions are rendered
     } else {
       console.error(`MapDisplay: Directions request failed. Status: ${status}`, response);
       setDirectionsResponse(null);
@@ -70,45 +70,53 @@ function MapDisplay({
 
   const handleIdle = () => {
     if (map) {
+        // If directions were just rendered, the map likely panned/zoomed to fit the route.
+        // Capture this new center/zoom.
         if (directionsJustRendered.current) {
             const newCenter = map.getCenter();
             const newZoom = map.getZoom();
             if (newCenter) {
-                console.log("MapDisplay handleIdle (after directions): Setting center from map", { lat: newCenter.lat(), lng: newCenter.lng() });
                 setCurrentCenter({ lat: newCenter.lat(), lng: newCenter.lng() });
             }
             if (newZoom) {
-                console.log("MapDisplay handleIdle (after directions): Setting zoom from map", newZoom);
                 setCurrentZoom(newZoom);
             }
-            directionsJustRendered.current = false;
+            directionsJustRendered.current = false; // Reset flag
         } else {
+            // Otherwise, it's user interaction, update center/zoom as before.
             const newCenter = map.getCenter();
             const newZoom = map.getZoom();
             if (newCenter) {
-                // console.log("MapDisplay handleIdle (user interaction): Setting center", { lat: newCenter.lat(), lng: newCenter.lng() });
                 setCurrentCenter({ lat: newCenter.lat(), lng: newCenter.lng() });
             }
             if (newZoom) {
-                // console.log("MapDisplay handleIdle (user interaction): Setting zoom", newZoom);
                 setCurrentZoom(newZoom);
             }
         }
     }
   };
+  
 
   if (loadError) {
-    return <div>Error loading map: {loadError.message}. Check console.</div>;
+    return (
+      <div className="flex items-center justify-center h-full w-full bg-gray-700 text-red-400 text-lg p-4">
+        Error loading map: {loadError.message}. Check console.
+      </div>
+    );
   }
   if (!isLoaded) {
-    return <div>Loading Map...</div>;
+    return (
+      <div className="flex items-center justify-center h-full w-full bg-gray-700 text-gray-300 text-lg">
+        Loading Map...
+      </div>
+    );
   }
 
   const googleMapWaypoints = waypoints && waypoints.length > 0
     ? waypoints.map(poi => {
         if (!poi.location || !poi.location.coordinates) {
             console.warn("MapDisplay: Waypoint missing location/coordinates, cannot be used in DirectionsService:", poi);
-            return null; // Skip this waypoint if it doesn't have coordinates
+            return null;
         }
         return {
             location: {
@@ -117,7 +125,7 @@ function MapDisplay({
             },
             stopover: true,
         };
-    }).filter(wp => wp !== null) // Filter out any null waypoints
+    }).filter(wp => wp !== null)
     : [];
 
   return (
@@ -128,12 +136,10 @@ function MapDisplay({
       onLoad={onLoad}
       onUnmount={onUnmount}
       onIdle={handleIdle}
-      options={{ streetViewControl: false, mapTypeControl: false }}
+      options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: false, zoomControl: true }}
     >
       {pois && pois.map((poi) => {
-        // console.log(`MapDisplay: Evaluating POI for marker - Name: ${poi.name}, DataSource: ${poi.dataSource}, HasLocation: ${!!poi.location}, HasCoords: ${!!poi.location?.coordinates}, Coords:`, poi.location?.coordinates);
         if (poi.location && poi.location.coordinates && poi.location.coordinates.length === 2) {
-        //   console.log(`MapDisplay: Rendering marker for ${poi.name} (${poi.dataSource}) at [lng,lat]:`, poi.location.coordinates);
           return (
             <Marker
               key={`${poi.dataSource}-${poi.originalId || poi.placeId}`}
@@ -143,10 +149,14 @@ function MapDisplay({
               }}
               title={`${poi.name} (${poi.dataSource})`}
               onClick={() => setSelectedPoi(poi)}
+              // Example: Custom icon (optional)
+              // icon={{
+              //   url: poi.dataSource === 'google-places' ? '/path/to/google-icon.png' : '/path/to/db-icon.png',
+              //   scaledSize: new window.google.maps.Size(30, 30)
+              // }}
             />
           );
         } else {
-        //   console.warn(`MapDisplay: NOT rendering marker for ${poi.name} (${poi.dataSource}), location/coords issue.`);
           return null;
         }
       })}
@@ -159,17 +169,17 @@ function MapDisplay({
           }}
           onCloseClick={() => setSelectedPoi(null)}
         >
-          <div>
-            <h3>{selectedPoi.name} ({selectedPoi.dataSource})</h3>
-            <p>{selectedPoi.shortDescription || selectedPoi.description || 'No description'}</p>
-            {selectedPoi.addressString && <p><small>{selectedPoi.addressString}</small></p>}
+          <div className="p-1 text-gray-800"> {/* InfoWindows often need their own styling or inherit from Google Maps' default */}
+            <h3 className="text-md font-semibold mb-1">{selectedPoi.name} ({selectedPoi.dataSource})</h3>
+            <p className="text-xs mb-1">{selectedPoi.shortDescription || selectedPoi.description || 'No description'}</p>
+            {selectedPoi.addressString && <p className="text-xs text-gray-600"><small>{selectedPoi.addressString}</small></p>}
           </div>
         </InfoWindow>
       )}
 
       {isLoaded && origin && destination && (
         <DirectionsService
-          key={`${origin}-${destination}-${googleMapWaypoints.length}-${Date.now()}`}
+          key={`${origin}-${destination}-${googleMapWaypoints.length}-${Date.now()}`} // Key change to force re-fetch if waypoints content changes by reference but not length
           options={{
             destination: destination,
             origin: origin,
@@ -185,7 +195,13 @@ function MapDisplay({
         <DirectionsRenderer
           options={{
             directions: directionsResponse,
-            preserveViewport: true, 
+            preserveViewport: true, // Set to false to allow map to pan/zoom to fit the route
+            suppressMarkers: true, // Optionally suppress default A/B markers if you place your own
+            polylineOptions: {
+              strokeColor: "#007bff", // Example: Blue route line
+              strokeOpacity: 0.8,
+              strokeWeight: 6
+            }
           }}
         />
       )}

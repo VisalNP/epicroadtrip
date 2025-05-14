@@ -2,10 +2,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import MapDisplay from './components/MapDisplay';
 import Sidebar from './components/Sidebar';
+import PoiDisplayPanel from './components/PoiDisplayPanel';
 import TripItineraryDisplay from './components/TripItineraryDisplay';
 import AuthModal from './components/AuthModal';
 import SavedTripsDisplay from './components/SavedTripsDisplay';
-import './App.css';
 import {
   fetchDatatourismePois,
   fetchHotelSuggestionsFromApi,
@@ -20,13 +20,8 @@ import {
   deleteUserSavedTrip
 } from './services/api';
 
-console.log("App.js - Imported Sidebar:", typeof Sidebar, Sidebar);
-console.log("App.js - Imported MapDisplay:", typeof MapDisplay, MapDisplay);
-console.log("App.js - Imported TripItineraryDisplay:", typeof TripItineraryDisplay, TripItineraryDisplay);
-console.log("App.js - Imported AuthModal:", typeof AuthModal, AuthModal);
-console.log("App.js - Imported SavedTripsDisplay:", typeof SavedTripsDisplay, SavedTripsDisplay);
-
 function App() {
+  // ... (all existing state up to here) ...
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [searchedLocations, setSearchedLocations] = useState([]);
@@ -43,8 +38,19 @@ function App() {
   const [savedTrips, setSavedTrips] = useState([]);
   const [isSavedTripsModalOpen, setIsSavedTripsModalOpen] = useState(false);
 
+  const [isLoadingOrigin, setIsLoadingOrigin] = useState(false);
+  const [isLoadingDestination, setIsLoadingDestination] = useState(false);
+  const [isLoadingNewLocation, setIsLoadingNewLocation] = useState(false);
+
+  // New state for POI Panel minimization
+  const [isPoiPanelMinimized, setIsPoiPanelMinimized] = useState(false);
+
+  const togglePoiPanelMinimize = () => {
+    setIsPoiPanelMinimized(prev => !prev);
+  };
+
+  // ... (rest of your functions: addWaypoint, removeWaypoint, etc.)
   const addWaypoint = (poi) => {
-    console.log("App.js: Attempting to add waypoint:", poi);
     if (!poi || (!poi.originalId && !poi.placeId)) {
         console.error("App.js: Waypoint is missing originalId or placeId", poi);
         return;
@@ -54,9 +60,6 @@ function App() {
 
     if (!selectedWaypoints.find(wp => wp[idKey] === poiId)) {
       setSelectedWaypoints(prevWaypoints => [...prevWaypoints, poi]);
-      console.log("App.js: Waypoint added:", poi.name);
-    } else {
-      console.log("App.js: POI already in waypoints:", poi.name);
     }
   };
 
@@ -76,35 +79,37 @@ function App() {
       alert("Please set an origin and destination first.");
       return;
     }
-    setDirectionsResponse(null);
-    setIsTripModalOpen(false);
-    console.log("App.js: Calculating route with origin, destination, and waypoints:", origin, destination, selectedWaypoints);
+    setDirectionsResponse(null); 
+    setIsTripModalOpen(false); 
   };
-
+  
   const updateLocationPois = (locationId, data, isLoading = false, error = null, searchCategory = 'poi') => {
-    console.log(`App.js: updateLocationPois - ID: ${locationId}, Category: ${searchCategory}, Data received:`, JSON.parse(JSON.stringify(data || {})));
     setSearchedLocations(prevLocations =>
       prevLocations.map(loc =>
-        loc.id === locationId ? { ...loc, name: loc.name, pois: data?.pois || [], isLoading, error: error?.message || null, category: searchCategory } : loc
+        loc.id === locationId ? { 
+          ...loc, 
+          pois: data?.pois || [], 
+          isLoading, 
+          error: error?.message || null, 
+          category: searchCategory 
+        } : loc
       )
     );
   };
 
   const handleFetchPoisGeneric = async (locationName, locationId, category = 'poi', searchQuery = '') => {
     if (!locationName || !locationName.trim() || !locationId) {
-        console.log("App.js: handleFetchPoisGeneric - Bailing: No locationName or locationId provided for fetch.");
         const targetLocation = searchedLocations.find(loc => loc.id === locationId);
         if (targetLocation) {
             updateLocationPois(locationId, { pois: [] }, false, null, category);
         }
         return;
     }
-    console.log(`App.js: handleFetchPoisGeneric - Fetching for: "${locationName}", ID: ${locationId}, Category: ${category}, SearchQuery: "${searchQuery}"`);
 
     setSearchedLocations(prev => prev.map(loc => loc.id === locationId ? {...loc, isLoading: true, error: null, pois: [], category: category} : loc));
 
     let apiCallFunction;
-    const params = { limit: 20 };
+    const params = { limit: 20 }; 
 
     if (searchQuery.trim()) {
         params.search = searchQuery.trim();
@@ -124,27 +129,24 @@ function App() {
         apiCallFunction = fetchBarSuggestionsFromApi;
         break;
       case 'events':
-        params.locality = locationName;
+        params.locality = locationName; 
         apiCallFunction = fetchEnjoySuggestionsFromDb;
         break;
       case 'transport':
-        params.locality = locationName;
+        params.locality = locationName; 
         apiCallFunction = fetchTravelSuggestionsFromDb;
         break;
       case 'poi':
       default:
-        params.locality = locationName;
+        params.locality = locationName; 
         apiCallFunction = fetchDatatourismePois;
         break;
     }
 
     try {
-      console.log(`App.js: Calling API for ${category} with params:`, params);
       const data = await apiCallFunction(params);
-      console.log(`App.js: API response for ${category} at ${locationName}:`, JSON.parse(JSON.stringify(data || {})));
       updateLocationPois(locationId, data, false, null, category);
     } catch (err) {
-      console.error(`App.js: Error fetching ${category} for ${locationName} (ID: ${locationId}):`, err);
       updateLocationPois(locationId, null, false, err, category);
     }
   };
@@ -153,21 +155,39 @@ function App() {
     const trimmedName = name.trim();
     setSearchedLocations(prev => {
       const existingEntryIndex = prev.findIndex(l => l.id === id);
-      if (!trimmedName) {
+      
+      if (!trimmedName) { 
         if (id === 'origin' || id === 'destination') {
-          return prev.filter(l => l.id !== id);
+          const entryToUpdate = prev.find(l => l.id === id);
+          if (entryToUpdate) { 
+            return prev.map(l => l.id === id ? {...l, name: '', pois: [], isLoading: false, error: null} : l);
+          }
         }
-        return prev;
+        return prev; 
       }
-      if (existingEntryIndex > -1) {
+
+      if (existingEntryIndex > -1) { 
         const currentEntry = prev[existingEntryIndex];
         const poisToKeep = (currentEntry.name === trimmedName && currentEntry.category === category) ? currentEntry.pois : [];
-        const updatedEntry = { ...currentEntry, name: trimmedName, category, pois: poisToKeep, isLoading: false, error: null };
+        const updatedEntry = { 
+          ...currentEntry, 
+          name: trimmedName, 
+          category, 
+          pois: poisToKeep, 
+          isLoading: (currentEntry.name === trimmedName && currentEntry.category === category) ? currentEntry.isLoading : false,
+          error: (currentEntry.name === trimmedName && currentEntry.category === category) ? currentEntry.error : null,
+        };
         const newLocations = [...prev];
         newLocations[existingEntryIndex] = updatedEntry;
         return newLocations;
-      } else {
+      } else { 
         const newEntry = { id, name: trimmedName, pois: [], isLoading: false, error: null, category };
+        if (id === 'origin') return [newEntry, ...prev.filter(l => l.id !== 'origin')];
+        if (id === 'destination') {
+            const originExists = prev.find(l => l.id === 'origin');
+            if (originExists) return [originExists, newEntry, ...prev.filter(l => l.id !== 'origin' && l.id !== 'destination')];
+            return [newEntry, ...prev.filter(l => l.id !== 'destination')];
+        }
         return [...prev, newEntry];
       }
     });
@@ -176,116 +196,147 @@ function App() {
 
   const handleSetOrigin = (locationName) => {
     const newOriginName = locationName.trim();
-    setOrigin(newOriginName);
+    setOrigin(newOriginName); 
+    const currentOriginEntry = searchedLocations.find(l => l.id === 'origin');
+    const currentCategory = currentOriginEntry?.category || 'poi'; 
+    
     if (!newOriginName) {
-        findOrCreateLocationEntry('', 'origin');
-        if (activeTabId === 'origin') {
-            const destTab = searchedLocations.find(l => l.id === 'destination');
-            const firstCustomTab = searchedLocations.find(l => l.id !== 'origin' && l.id !== 'destination');
-            setActiveTabId(destTab ? 'destination' : (firstCustomTab ? firstCustomTab.id : ''));
+        setSearchedLocations(prev => prev.map(l => l.id === 'origin' ? {...l, name: '', pois: [], isLoading: false, error: null} : l));
+        if (activeTabId === 'origin') { 
+            const destTab = searchedLocations.find(l => l.id === 'destination' && l.name);
+            const firstCustomTab = searchedLocations.find(l => l.id !== 'origin' && l.id !== 'destination' && l.name);
+            setActiveTabId(destTab ? 'destination' : (firstCustomTab ? firstCustomTab.id : (searchedLocations.length > 1 ? searchedLocations.filter(l => l.id !== 'origin')[0].id : '')));
         }
     } else {
-        const currentCategory = searchedLocations.find(l => l.id === 'origin')?.category || 'poi';
         findOrCreateLocationEntry(newOriginName, 'origin', currentCategory);
-        setActiveTabId('origin');
+        setActiveTabId('origin'); 
     }
   };
 
   const handleSetDestination = (locationName) => {
     const newDestName = locationName.trim();
-    setDestination(newDestName);
+    setDestination(newDestName); 
+    const currentDestEntry = searchedLocations.find(l => l.id === 'destination');
+    const currentCategory = currentDestEntry?.category || 'poi'; 
+
     if (!newDestName) {
-        findOrCreateLocationEntry('', 'destination');
+        setSearchedLocations(prev => prev.map(l => l.id === 'destination' ? {...l, name: '', pois: [], isLoading: false, error: null} : l));
         if (activeTabId === 'destination') {
-            const originTab = searchedLocations.find(l => l.id === 'origin');
-            const firstCustomTab = searchedLocations.find(l => l.id !== 'origin' && l.id !== 'destination');
-            setActiveTabId(originTab ? 'origin' : (firstCustomTab ? firstCustomTab.id : ''));
+            const originTab = searchedLocations.find(l => l.id === 'origin' && l.name);
+            const firstCustomTab = searchedLocations.find(l => l.id !== 'origin' && l.id !== 'destination' && l.name);
+            setActiveTabId(originTab ? 'origin' : (firstCustomTab ? firstCustomTab.id : (searchedLocations.length > 1 ? searchedLocations.filter(l => l.id !== 'destination')[0].id : '')));
         }
     } else {
-        const currentCategory = searchedLocations.find(l => l.id === 'destination')?.category || 'poi';
         findOrCreateLocationEntry(newDestName, 'destination', currentCategory);
-        setActiveTabId('destination');
+        setActiveTabId('destination'); 
     }
   };
 
-  const handleFetchForOrigin = (locationName, category, searchQuery) => {
-    const trimmedName = locationName.trim();
+  const handleFetchForOrigin = async (locationName, category, searchQuery) => {
+    const trimmedName = locationName.trim(); 
     if (!trimmedName) return;
+
+    setIsLoadingOrigin(true);
     setOrigin(trimmedName); 
-    findOrCreateLocationEntry(trimmedName, 'origin', category);
-    handleFetchPoisGeneric(trimmedName, 'origin', category, searchQuery);
+    findOrCreateLocationEntry(trimmedName, 'origin', category); 
     setActiveTabId('origin');
+    try {
+      await handleFetchPoisGeneric(trimmedName, 'origin', category, searchQuery);
+    } finally {
+      setIsLoadingOrigin(false);
+    }
   };
 
-  const handleFetchForDestination = (locationName, category, searchQuery) => {
+  const handleFetchForDestination = async (locationName, category, searchQuery) => {
     const trimmedName = locationName.trim();
     if (!trimmedName) return;
-    setDestination(trimmedName);
-    findOrCreateLocationEntry(trimmedName, 'destination', category);
-    handleFetchPoisGeneric(trimmedName, 'destination', category, searchQuery);
+
+    setIsLoadingDestination(true);
+    setDestination(trimmedName); 
+    findOrCreateLocationEntry(trimmedName, 'destination', category); 
     setActiveTabId('destination');
+    try {
+      await handleFetchPoisGeneric(trimmedName, 'destination', category, searchQuery);
+    } finally {
+      setIsLoadingDestination(false);
+    }
   };
 
-  const handleAddNewSearchLocation = (locationName, category = 'poi', searchQuery = '') => {
+  const handleAddNewSearchLocation = async (locationName, category = 'poi', searchQuery = '') => {
     const trimmedLocationName = locationName.trim();
     if (!trimmedLocationName) return;
-    console.log(`App.js: handleAddNewSearchLocation - Name: "${trimmedLocationName}", Category: ${category}, Search: "${searchQuery}"`);
 
-    const existingCustomLocation = searchedLocations.find(loc => loc.name.toLowerCase() === trimmedLocationName.toLowerCase() && loc.category === category && !['origin', 'destination'].includes(loc.id));
+    setIsLoadingNewLocation(true);
+
+    const existingCustomLocation = searchedLocations.find(loc => 
+        loc.name.toLowerCase() === trimmedLocationName.toLowerCase() && 
+        loc.category === category && 
+        !['origin', 'destination'].includes(loc.id) 
+    );
+
+    let targetId;
     if (existingCustomLocation) {
-        setActiveTabId(existingCustomLocation.id);
-        handleFetchPoisGeneric(trimmedLocationName, existingCustomLocation.id, category, searchQuery);
-        return;
+        targetId = existingCustomLocation.id;
+    } else {
+        targetId = `custom-${Date.now()}`;
+        setSearchedLocations(prev => [
+          ...prev,
+          { id: targetId, name: trimmedLocationName, pois: [], isLoading: false, error: null, category: category }
+        ]);
     }
-
-    const newLocationId = `custom-${Date.now()}`;
-    setSearchedLocations(prev => [
-      ...prev,
-      { id: newLocationId, name: trimmedLocationName, pois: [], isLoading: false, error: null, category: category }
-    ]);
-    handleFetchPoisGeneric(trimmedLocationName, newLocationId, category, searchQuery);
-    setActiveTabId(newLocationId);
+    
+    setActiveTabId(targetId);
+    try {
+      await handleFetchPoisGeneric(trimmedLocationName, targetId, category, searchQuery);
+    } finally {
+      setIsLoadingNewLocation(false);
+    }
   };
 
   const removeSearchTab = (locationIdToRemove) => {
-    let newActiveTabId = activeTabId;
-    const remainingLocations = searchedLocations.filter(loc => loc.id !== locationIdToRemove);
+    setSearchedLocations(prevLocations => {
+        const remainingLocations = prevLocations.filter(loc => loc.id !== locationIdToRemove);
+        
+        if (activeTabId === locationIdToRemove) {
+            let newActiveTabId = '';
+            const originTabExists = remainingLocations.some(l => l.id === 'origin' && l.name.trim());
+            const destTabExists = remainingLocations.some(l => l.id === 'destination' && l.name.trim());
 
-    if (activeTabId === locationIdToRemove) {
-      const originTabExists = remainingLocations.some(l => l.id === 'origin');
-      const destTabExists = remainingLocations.some(l => l.id === 'destination');
-      if (originTabExists) newActiveTabId = 'origin';
-      else if (destTabExists) newActiveTabId = 'destination';
-      else if (remainingLocations.length > 0) newActiveTabId = remainingLocations[0].id;
-      else newActiveTabId = '';
-    }
-    setSearchedLocations(remainingLocations);
-    setActiveTabId(newActiveTabId);
+            if (originTabExists) newActiveTabId = 'origin';
+            else if (destTabExists) newActiveTabId = 'destination';
+            else if (remainingLocations.length > 0) newActiveTabId = remainingLocations[0].id;
+            setActiveTabId(newActiveTabId);
+        }
+        return remainingLocations;
+    });
 
     if (locationIdToRemove === 'origin') setOrigin('');
     if (locationIdToRemove === 'destination') setDestination('');
   };
   
   useEffect(() => {
-    const activeTabExists = searchedLocations.some(loc => loc.id === activeTabId);
-    // Initialize activeTabId if searchedLocations is populated and activeTabId is empty
-    if (searchedLocations.length > 0 && !activeTabId && !activeTabExists) {
-        const originTab = searchedLocations.find(loc => loc.id === 'origin' && loc.name);
-        const destTab = searchedLocations.find(loc => loc.id === 'destination' && loc.name);
-        if (originTab) setActiveTabId('origin');
-        else if (destTab) setActiveTabId('destination');
-        else setActiveTabId(searchedLocations[0].id);
-    } else if (searchedLocations.length > 0 && activeTabId && !activeTabExists) {
-      // If activeTabId was set but tab removed, find a new one
-      const originTab = searchedLocations.find(loc => loc.id === 'origin');
-      const destTab = searchedLocations.find(loc => loc.id === 'destination');
-      let newActiveId = '';
-      if (originTab) newActiveId = 'origin';
-      else if (destTab) newActiveId = 'destination';
-      else newActiveId = searchedLocations[0].id;
-      setActiveTabId(newActiveId);
-    } else if (searchedLocations.length === 0 && activeTabId) {
-      setActiveTabId('');
+    const activeTab = searchedLocations.find(loc => loc.id === activeTabId);
+    const activeTabIsValid = activeTab && activeTab.name.trim();
+
+    if (searchedLocations.length > 0) {
+        if (!activeTabId || !activeTabIsValid) { 
+            const originTab = searchedLocations.find(loc => loc.id === 'origin' && loc.name.trim());
+            const destTab = searchedLocations.find(loc => loc.id === 'destination' && loc.name.trim());
+            const firstValidCustomTab = searchedLocations.find(loc => 
+                loc.id !== 'origin' && loc.id !== 'destination' && loc.name.trim()
+            );
+            const firstAnyValidTab = searchedLocations.find(loc => loc.name.trim());
+
+
+            if (originTab) setActiveTabId('origin');
+            else if (destTab) setActiveTabId('destination');
+            else if (firstValidCustomTab) setActiveTabId(firstValidCustomTab.id);
+            else if (firstAnyValidTab) setActiveTabId(firstAnyValidTab.id); 
+            else if (searchedLocations.length > 0) setActiveTabId(searchedLocations[0].id); 
+            else setActiveTabId(''); 
+        }
+    } else if (searchedLocations.length === 0 && activeTabId) { 
+        setActiveTabId('');
     }
   }, [searchedLocations, activeTabId]);
 
@@ -332,7 +383,7 @@ function App() {
       fetchUserSavedTrips(currentUser.userId)
         .then(data => setSavedTrips(data.trips || []))
         .catch(err => {
-            console.error("Failed to load saved trips:", err);
+            console.error("Failed to fetch saved trips:", err);
             setSavedTrips([]);
         });
     } else {
@@ -372,6 +423,10 @@ function App() {
     setSavedTrips([]);
     setActiveTabId('');
     localStorage.removeItem('epicRoadTripUser');
+    setIsLoadingOrigin(false);
+    setIsLoadingDestination(false);
+    setIsLoadingNewLocation(false);
+    setIsPoiPanelMinimized(false); // Reset panel state on logout
   };
 
   const handleSaveCurrentTrip = async (tripName) => {
@@ -390,7 +445,7 @@ function App() {
       origin,
       destination,
       waypoints: selectedWaypoints.map(wp => ({
-        originalId: wp.originalId || wp.placeId,
+        originalId: wp.originalId || wp.placeId, 
         name: wp.name,
         dataSource: wp.dataSource,
         location: wp.location 
@@ -400,32 +455,33 @@ function App() {
       const result = await saveUserTrip(tripData, currentUser.userId);
       setSavedTrips(prevTrips => [...prevTrips, result.trip]);
       alert("Trip saved!");
-    } catch (error) {
+    } catch (error)
+    {
       alert(`Failed to save trip: ${error.message}`);
     }
   };
 
   const loadSavedTrip = (trip) => {
-    console.log("App.js: Loading saved trip:", trip);
     setOrigin(trip.origin);
     setDestination(trip.destination);
-    setSelectedWaypoints(trip.waypoints.map(wp => ({...wp, placeId: wp.placeId || wp.originalId})));
+    setSelectedWaypoints(trip.waypoints.map(wp => ({
+        ...wp, 
+        placeId: wp.placeId || wp.originalId, 
+        originalId: wp.originalId || wp.placeId
+    })));
 
     const newSearchedLocations = [];
     if (trip.origin) {
         newSearchedLocations.push({id: 'origin', name: trip.origin, pois: [], isLoading: false, error: null, category: 'poi'});
-        // Optionally fetch POIs: handleFetchPoisGeneric(trip.origin, 'origin', 'poi');
     }
     if (trip.destination) {
         newSearchedLocations.push({id: 'destination', name: trip.destination, pois: [], isLoading: false, error: null, category: 'poi'});
-        // Optionally fetch POIs: handleFetchPoisGeneric(trip.destination, 'destination', 'poi');
     }
     setSearchedLocations(newSearchedLocations);
     
-    setActiveTabId(trip.origin ? 'origin' : (trip.destination ? 'destination' : ''));
-    setDirectionsResponse(null);
+    setDirectionsResponse(null); 
     setIsSavedTripsModalOpen(false);
-    // setTimeout(() => calculateRouteWithWaypoints(), 0); // Could also just rely on MapDisplay re-render
+    setIsPoiPanelMinimized(false); // Ensure panel is open when loading a trip
   };
 
   const handleDeleteSavedTrip = async (tripId) => {
@@ -438,24 +494,11 @@ function App() {
     }
   };
 
+  const isAPrimaryModalOpen = isTripModalOpen || isSavedTripsModalOpen || isAuthModalOpen;
+
   return (
-    <div className="app-container">
-      <Sidebar
-        origin={origin}
-        onSetOrigin={handleSetOrigin}
-        onFetchForOrigin={handleFetchForOrigin}
-        destination={destination}
-        onSetDestination={handleSetDestination}
-        onFetchForDestination={handleFetchForDestination}
-        searchedLocations={searchedLocations}
-        activeTabId={activeTabId}
-        setActiveTabId={setActiveTabId}
-        onAddNewSearchLocation={handleAddNewSearchLocation}
-        onRemoveSearchTab={removeSearchTab}
-        onAddWaypoint={addWaypoint}
-        setDirectionsResponse={setDirectionsResponse}
-      />
-      <div className="map-area">
+    <div className="relative h-full w-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="absolute inset-0 z-0">
         <MapDisplay
           origin={origin}
           destination={destination}
@@ -466,24 +509,53 @@ function App() {
         />
       </div>
 
-      <div className="action-buttons-container">
-        <button onClick={() => setIsTripModalOpen(true)} className="view-trip-button">
+      <Sidebar
+        origin={origin}
+        onSetOrigin={handleSetOrigin}
+        onFetchForOrigin={handleFetchForOrigin}
+        destination={destination}
+        onSetDestination={handleSetDestination}
+        onFetchForDestination={handleFetchForDestination}
+        onAddNewSearchLocation={handleAddNewSearchLocation}
+        isLoadingOrigin={isLoadingOrigin}
+        isLoadingDestination={isLoadingDestination}
+        isLoadingNewLocation={isLoadingNewLocation}
+      />
+
+      {/* Conditionally render PoiDisplayPanel */}
+      {searchedLocations.length > 0 && !isAPrimaryModalOpen && (
+        <PoiDisplayPanel
+          searchedLocations={searchedLocations}
+          activeTabId={activeTabId}
+          setActiveTabId={setActiveTabId}
+          onRemoveSearchTab={removeSearchTab}
+          onAddWaypoint={addWaypoint}
+          // New props for minimization
+          isMinimized={isPoiPanelMinimized}
+          onToggleMinimize={togglePoiPanelMinimize}
+        />
+      )}
+
+      <div className="fixed top-5 right-5 z-[1000] flex gap-3 items-center">
+        <button onClick={() => setIsTripModalOpen(true)} className="btn-secondary !py-2 !px-4 text-sm">
           Current Trip ({selectedWaypoints.length})
         </button>
         {currentUser && (
-            <button onClick={() => setIsSavedTripsModalOpen(true)} className="view-trip-button saved-trips">
+            <button onClick={() => setIsSavedTripsModalOpen(true)} className="btn-secondary !py-2 !px-4 text-sm">
                 Saved Trips ({savedTrips.length})
             </button>
         )}
         {!currentUser ? (
           <button
             onClick={() => { setAuthMode('login'); setIsAuthModalOpen(true); }}
-            className="view-trip-button auth-action"
+            className="btn-primary !py-2 !px-4 text-sm"
           >
             Login / Register
           </button>
         ) : (
-          <button onClick={handleLogout} className="view-trip-button logout">
+          <button onClick={handleLogout}
+            className="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm shadow-sm hover:shadow-md"
+          >
             Logout ({currentUser.username})
           </button>
         )}
@@ -501,10 +573,10 @@ function App() {
 
       {isTripModalOpen && (
         <TripItineraryDisplay
-          origin={origin} // Pass origin
-          destination={destination} // Pass destination
+          origin={origin}
+          destination={destination}
           waypoints={selectedWaypoints}
-          directionsResponse={directionsResponse} // Pass the current route data
+          directionsResponse={directionsResponse}
           onRemoveWaypoint={removeWaypoint}
           onReorderWaypoints={reorderWaypoints}
           onCalculateRoute={calculateRouteWithWaypoints}

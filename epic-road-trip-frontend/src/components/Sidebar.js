@@ -1,53 +1,39 @@
 // src/components/Sidebar.js
 import React, { useState } from 'react';
-
-const CATEGORY_OPTIONS = [
-  { value: 'poi', label: 'Points of Interest (DB)' },
-  { value: 'hotels', label: 'Hotels (Google)' },
-  { value: 'restaurants', label: 'Restaurants (Google)' },
-  { value: 'bars', label: 'Bars (Google)' },
-  { value: 'events', label: 'Events (DB)' },
-  { value: 'transport', label: 'Transport (DB)' },
-];
+import { CATEGORY_OPTIONS } from '../constants/appConstants'; // Import shared constants
 
 function Sidebar({
   origin,
-  onSetOrigin, // Renamed from setOriginAndFetch
-  onFetchForOrigin, // New: To trigger fetch for origin
+  onSetOrigin,
+  onFetchForOrigin,
   destination,
-  onSetDestination, // Renamed from setDestinationAndFetch
-  onFetchForDestination, // New: To trigger fetch for destination
-  searchedLocations,
-  activeTabId,
-  setActiveTabId,
+  onSetDestination,
+  onFetchForDestination,
   onAddNewSearchLocation,
-  onRemoveSearchTab,
-  onAddWaypoint,
-  setDirectionsResponse  // This is for the main "Get Directions (Origin to Destination)" button
+  // Props for individual button loading states, managed by parent
+  isLoadingOrigin,
+  isLoadingDestination,
+  isLoadingNewLocation,
 }) {
   const [newLocationSearch, setNewLocationSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(CATEGORY_OPTIONS[0].value);
+  // selectedCategoryState and searchKeyword are now used for all searches originating from this sidebar
+  const [selectedCategoryState, setSelectedCategoryState] = useState(CATEGORY_OPTIONS[0].value);
   const [searchKeyword, setSearchKeyword] = useState('');
 
-  const handleOriginInputChange = (e) => {
-    onSetOrigin(e.target.value); // Updates App.js 'origin' state string
-  };
-
-  const handleDestinationInputChange = (e) => {
-    onSetDestination(e.target.value); // Updates App.js 'destination' state string
-  };
+  const handleOriginInputChange = (e) => onSetOrigin(e.target.value);
+  const handleDestinationInputChange = (e) => onSetDestination(e.target.value);
 
   const handleOriginSearchClick = () => {
     if (origin.trim()) {
-      // Use the current selectedCategory and searchKeyword from Sidebar's state
-      onFetchForOrigin(origin, selectedCategory, searchKeyword);
+      // Pass current category and keyword for origin search
+      onFetchForOrigin(origin, selectedCategoryState, searchKeyword);
     }
   };
 
   const handleDestinationSearchClick = () => {
     if (destination.trim()) {
-      // Use the current selectedCategory and searchKeyword from Sidebar's state
-      onFetchForDestination(destination, selectedCategory, searchKeyword);
+      // Pass current category and keyword for destination search
+      onFetchForDestination(destination, selectedCategoryState, searchKeyword);
     }
   };
 
@@ -56,167 +42,114 @@ function Sidebar({
 
   const handleAddNewLocationTab = () => {
     if (newLocationSearch.trim()) {
-      onAddNewSearchLocation(newLocationSearch, selectedCategory, searchKeyword);
-      setNewLocationSearch('');
-      // Optionally clear searchKeyword too if desired: setSearchKeyword('');
+      onAddNewSearchLocation(newLocationSearch, selectedCategoryState, searchKeyword);
+      setNewLocationSearch(''); // Clear input after search
     }
   };
-
-  const handleGetDirections = () => {
-    // This button calculates route between current origin and destination strings
-    // It does not consider the selectedCategory or searchKeyword from the lower section
-    const originEntry = searchedLocations.find(loc => loc.id === 'origin');
-    const destinationEntry = searchedLocations.find(loc => loc.id === 'destination');
-
-    // Check App.js 'origin' and 'destination' state directly for this button
-    if (origin.trim() && destination.trim()) {
-      setDirectionsResponse(null); // Signal MapDisplay to recalculate
-    } else {
-      alert("Please ensure both Origin and Destination are set in their respective input fields.");
-    }
-  };
-
-  const activeLocationData = searchedLocations.find(loc => loc.id === activeTabId);
-  const poisToDisplay = activeLocationData ? activeLocationData.pois : [];
-  const isLoading = activeLocationData ? activeLocationData.isLoading : false;
-  const error = activeLocationData ? activeLocationData.error : null;
-  const currentTabName = activeLocationData ? activeLocationData.name : "";
-  // Category for the current active tab is important for display messages
-  const currentTabCategoryDisplay = activeLocationData ? CATEGORY_OPTIONS.find(opt => opt.value === activeLocationData.category)?.label || activeLocationData.category : "";
-
+  
+  const commonInputStyles = "input-field"; // Define your input-field class in global CSS
+  const commonButtonStyles = "btn-primary w-full text-sm"; // Define btn-primary in global CSS
 
   return (
-    <div className="sidebar">
-      <div className="location-inputs">
-        {/* Origin Input and Its Search Button */}
+    <div 
+      className="absolute top-5 left-5 z-10 w-[380px] max-h-[calc(100vh-40px)]
+                 bg-slate-200 bg-opacity-30 backdrop-blur-md p-6 shadow-xl rounded-xl
+                 overflow-y-auto flex flex-col" // Outer container scrolls if its direct children overflow
+    >
+      <div className="flex flex-col gap-5 flex-shrink-0"> {/* Input sections wrapper */}
+        {/* Origin */}
         <div>
+          <label htmlFor="origin-loc" className="block text-sm font-medium text-brand-text-secondary mb-1">Origine</label>
           <input
+            id="origin-loc"
             type="text"
-            placeholder="Origin Location"
+            placeholder="Enter origin location"
             value={origin}
             onChange={handleOriginInputChange}
             onKeyPress={(e) => e.key === 'Enter' && handleOriginSearchClick()}
+            className={commonInputStyles}
           />
-          <button onClick={handleOriginSearchClick} disabled={!origin.trim() || (isLoading && activeTabId === 'origin')}>
-            {isLoading && activeTabId === 'origin' ? 'Searching Origin...' : 'Search POIs for Origin'}
+          <button 
+            onClick={handleOriginSearchClick} 
+            disabled={!origin.trim() || isLoadingOrigin} 
+            className={`${commonButtonStyles} mt-2`}
+          >
+            {isLoadingOrigin ? 'Searching...' : 'Recherche de Points d\'Intérêt'}
           </button>
         </div>
 
-        {/* Destination Input and Its Search Button */}
+        {/* Destination */}
         <div>
+          <label htmlFor="dest-loc" className="block text-sm font-medium text-brand-text-secondary mb-1">Destination</label>
           <input
+            id="dest-loc"
             type="text"
-            placeholder="Destination Location"
+            placeholder="Enter destination location"
             value={destination}
             onChange={handleDestinationInputChange}
             onKeyPress={(e) => e.key === 'Enter' && handleDestinationSearchClick()}
+            className={commonInputStyles}
           />
-          <button onClick={handleDestinationSearchClick} disabled={!destination.trim() || (isLoading && activeTabId === 'destination')}>
-            {isLoading && activeTabId === 'destination' ? 'Searching Dest...' : 'Search POIs for Destination'}
+          <button 
+            onClick={handleDestinationSearchClick} 
+            disabled={!destination.trim() || isLoadingDestination} 
+            className={`${commonButtonStyles} mt-2`}
+          >
+            {isLoadingDestination ? 'Searching...' : 'Recherche de Points d\'Intérêt'}
           </button>
         </div>
 
-        <hr style={{borderColor: '#444', margin: '15px 0'}} />
+        <hr className="border-brand-border my-1" />
 
-        {/* Section for Searching in a New Tab / Category Search */}
-        <div>
-            <label htmlFor="category-select" style={{display: 'block', marginBottom: '5px', fontSize: '0.9em'}}>Search for:</label>
-            <select
-                id="category-select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                style={{width: '100%', padding: '10px', marginBottom: '10px', backgroundColor: '#383838', color: '#e0e0e0', border: '1px solid #555', borderRadius: '6px'}}
+        {/* New Location Search Section */}
+        <div className="flex flex-col gap-3 p-4 bg-brand-blue-light rounded-lg">
+            <h3 className="text-md font-semibold text-brand-blue-dark mb-1">Recherche Avancée</h3>  
+            <div>
+              <label htmlFor="category-select" className="block text-sm font-medium text-brand-text-secondary mb-1">Categorie</label>
+              <select
+                  id="category-select"
+                  value={selectedCategoryState}
+                  onChange={(e) => setSelectedCategoryState(e.target.value)}
+                  className={`${commonInputStyles} py-2.5`} // Ensure padding matches input
+              >
+                  {CATEGORY_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="keyword-search" className="block text-sm font-medium text-brand-text-secondary mb-1">Mot-clé (Optionnel)</label>
+              <input
+                  id="keyword-search"
+                  type="text"
+                  placeholder={`"Parc", "Musée", "Luxe"`}
+                  value={searchKeyword}
+                  onChange={handleSearchKeywordChange}
+                  className={commonInputStyles}
+              />
+            </div>
+            <div>
+              <label htmlFor="new-loc-search" className="block text-sm font-medium text-brand-text-secondary mb-1">Location</label>
+              <input
+                  id="new-loc-search"
+                  type="text"
+                  placeholder="Recherchez une nouvelle localisation"
+                  value={newLocationSearch}
+                  onChange={handleNewLocationSearchChange}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddNewLocationTab()}
+                  className={commonInputStyles}
+              />
+            </div>
+            <button 
+                onClick={handleAddNewLocationTab} 
+                disabled={!newLocationSearch.trim() || isLoadingNewLocation} 
+                className={`${commonButtonStyles} bg-brand-blue-medium hover:bg-brand-blue-dark`}
             >
-                {CATEGORY_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-            </select>
-            <input
-                type="text"
-                placeholder={`Optional: Keyword for ${CATEGORY_OPTIONS.find(c=>c.value === selectedCategory)?.label || selectedCategory}...`}
-                value={searchKeyword}
-                onChange={handleSearchKeywordChange}
-            />
-            <input
-                type="text"
-                placeholder="Location for selected category..."
-                value={newLocationSearch}
-                onChange={handleNewLocationSearchChange}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddNewLocationTab()}
-            />
-            <button onClick={handleAddNewLocationTab} disabled={!newLocationSearch.trim() || isLoading}>
-                Search in New Tab
+                {isLoadingNewLocation ? 'Searching...' : 'Recherche'}
             </button>
         </div>
-
-        {/* Main "Get Directions" Button */}
-        <button
-          onClick={handleGetDirections}
-          className="get-directions-main-btn"
-          disabled={!origin.trim() || !destination.trim()}
-        >
-          Get Directions (Origin to Destination)
-        </button>
       </div>
-
-      <div className="poi-section">
-        {searchedLocations.length > 0 && (
-          <div className="tabs">
-            {searchedLocations.map(loc => (
-              <button
-                key={loc.id}
-                className={`tab-button ${activeTabId === loc.id ? 'active' : ''}`}
-                onClick={() => setActiveTabId(loc.id)}
-              >
-                {loc.id === 'origin' ? 'Origin: ' : loc.id === 'destination' ? 'Destination: ' : `(${(CATEGORY_OPTIONS.find(opt => opt.value === loc.category)?.label.split(" ")[0] || loc.category)}) `}
-                {loc.name}
-                {(loc.id !== 'origin' && loc.id !== 'destination') && (
-                  <span onClick={(e) => { e.stopPropagation(); onRemoveSearchTab(loc.id); }}
-                        style={{ marginLeft: '8px', cursor: 'pointer', color: '#ff6b6b' }}>
-                    ×
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {isLoading && <p className="status-message">Loading {currentTabCategoryDisplay} for {currentTabName}...</p>}
-        {error && <p className="status-message" style={{ color: '#ff6b6b' }}>Error: {error}</p>}
-
-        {!isLoading && !error && poisToDisplay.length > 0 ? (
-          <ul className="poi-list">
-            {poisToDisplay.map((poi) => (
-              <li key={poi.originalId || poi.placeId}>
-                <div>
-                  <strong>{poi.name}</strong>
-                  {poi.addressString ? (
-                     <p style={{ fontSize: '0.8em', color: '#888' }}>{poi.addressString}</p>
-                  ): (poi.address?.city || poi.address?.locality) && (
-                    <p style={{ fontSize: '0.8em', color: '#888' }}>
-                      {poi.address.streetAddress && <>{poi.address.streetAddress}<br/></>}
-                      {poi.address.city || poi.address.locality || "N/A City"}
-                      {poi.address.postalCode && `, ${poi.address.postalCode}`}
-                    </p>
-                  )}
-                  <p>{poi.shortDescription || poi.description || 'No description available.'}</p>
-                </div>
-                {(poi.location && poi.location.coordinates) && (
-                  <button onClick={() => onAddWaypoint(poi)}>
-                    Add to Trip
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          !isLoading && !error && activeLocationData && currentTabName.trim() &&
-          <p className="status-message">No {currentTabCategoryDisplay} found for {currentTabName}.</p>
-        )}
-        {!isLoading && !error && (!activeLocationData || !currentTabName.trim()) &&
-          <p className="status-message">Select or search a location to view items.</p>
-        }
-      </div>
+      {/* Tabs and POI list are no longer here */}
     </div>
   );
 }
