@@ -1,23 +1,18 @@
-// epic-road-trip-backend/controllers/tripController.js
 const User = require('../models/userModel');
 const mongoose = require('mongoose');
-
-
-// Middleware (very basic) to simulate checking if user is "logged in"
-// In a real app, this would verify a JWT token from an Authorization header
 const simpleAuthCheck = (req, res, next) => {
-    const userId = req.headers['x-user-id']; // For simplicity, expecting userId in header
+    const userId = req.headers['x-user-id'];
     if (!userId) {
         return res.status(401).json({ message: "Unauthorized: No user ID provided." });
     }
-    req.userId = userId; // Attach to request object for use in controllers
+    req.userId = userId; 
     next();
 };
 
 
 exports.saveTrip = [simpleAuthCheck, async (req, res) => {
   const { name, origin, destination, waypoints } = req.body;
-  const userId = req.userId; // Get from our simpleAuthCheck middleware
+  const userId = req.userId; 
 
   if (!origin || !destination) {
     return res.status(400).json({ message: 'Origin and destination are required to save a trip.' });
@@ -33,13 +28,12 @@ exports.saveTrip = [simpleAuthCheck, async (req, res) => {
       name: name || `Trip to ${destination}`,
       origin,
       destination,
-      waypoints: waypoints || [] // Ensure waypoints is an array
+      waypoints: waypoints || []
     };
 
     user.savedTrips.push(newTrip);
     await user.save();
     
-    // Return the newly added trip with its _id
     const addedTrip = user.savedTrips[user.savedTrips.length - 1];
     res.status(201).json({ message: 'Trip saved successfully', trip: addedTrip });
 
@@ -52,7 +46,7 @@ exports.saveTrip = [simpleAuthCheck, async (req, res) => {
 exports.getSavedTrips = [simpleAuthCheck, async (req, res) => {
   const userId = req.userId;
   try {
-    const user = await User.findById(userId).select('savedTrips').lean(); // Only select savedTrips
+    const user = await User.findById(userId).select('savedTrips').lean(); 
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }

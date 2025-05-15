@@ -1,7 +1,4 @@
-// epic-road-trip-backend/controllers/poiController.js
 const POI = require('../models/poiModel');
-
-// Fetches POIs from your datatourisme MongoDB collection
 exports.getPois = async (req, res) => {
   try {
     const {
@@ -19,7 +16,7 @@ exports.getPois = async (req, res) => {
     } = req.query;
 
     let query = {};
-    query.dataSource = { $regex: /^datatourisme-/i }; // Filter for your datatourisme sources
+    query.dataSource = { $regex: /^datatourisme-/i };
 
     if (type) {
       const typeArray = type.split(',').map(t => new RegExp(t.trim(), 'i'));
@@ -90,8 +87,6 @@ exports.getPoiById = async (req, res) => {
 };
 
 exports.getEnjoySuggestions = async (req, res) => {
-  // Modifying req.query directly is generally okay if the function is the final handler.
-  // If getPois was a utility function used elsewhere, it'd be better to pass params explicitly.
   req.query.type = req.query.type || 'CulturalSite,EntertainmentAndEvent,Activity,Event,SportingEvent,ParkAndGarden,Museum';
   return exports.getPois(req, res);
 };

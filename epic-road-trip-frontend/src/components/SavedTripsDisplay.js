@@ -1,6 +1,4 @@
-// src/components/SavedTripsDisplay.js
 import React from 'react';
-// import { X, Trash2, Eye } from 'react-feather';
 
 function SavedTripsDisplay({ savedTrips, onLoadTrip, onDeleteTrip, onClose }) {
   return (
@@ -9,13 +7,13 @@ function SavedTripsDisplay({ savedTrips, onLoadTrip, onDeleteTrip, onClose }) {
       onClick={onClose}
     >
       <div 
-        className="bg-slate-200 bg-opacity-30 backdrop-blur-md card w-full max-w-sm max-h-[80vh] flex flex-col p-0" // p-0 because header/footer will have padding
+        className="bg-slate-200 bg-opacity-30 backdrop-blur-md card w-full max-w-sm max-h-[80vh] flex flex-col p-0" 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-5 pb-4 border-b border-brand-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-brand-text">Your Saved Trips</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            {/* <X size={22} /> */} ×
+           ×
           </button>
         </div>
         <div className="flex-grow overflow-y-auto p-5">
@@ -42,14 +40,14 @@ function SavedTripsDisplay({ savedTrips, onLoadTrip, onDeleteTrip, onClose }) {
                       className="text-brand-blue hover:text-brand-blue-dark p-1 rounded hover:bg-brand-blue-light transition-colors"
                       title="Load trip"
                     >
-                       {/* <Eye size={18} /> */} Load
+                        Load
                     </button>
                     <button 
                       onClick={() => onDeleteTrip(trip._id)} 
                       className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors"
                       title="Delete trip"
                     >
-                      {/* <Trash2 size={18} /> */} Delete
+                     Delete
                     </button>
                   </div>
                 </li>
@@ -60,7 +58,7 @@ function SavedTripsDisplay({ savedTrips, onLoadTrip, onDeleteTrip, onClose }) {
          <div className="p-5 pt-4 border-t border-brand-border flex-shrink-0">
             <button 
                 onClick={onClose} 
-                className="btn-secondary w-full !border-gray-300 !text-gray-700 hover:!bg-gray-100" // More neutral close
+                className="btn-secondary w-full !border-gray-300 !text-gray-700 hover:!bg-gray-100" 
             >
                 Close
             </button>

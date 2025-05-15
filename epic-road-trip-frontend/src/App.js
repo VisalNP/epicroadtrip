@@ -6,6 +6,7 @@ import PoiDisplayPanel from './components/PoiDisplayPanel';
 import TripItineraryDisplay from './components/TripItineraryDisplay';
 import AuthModal from './components/AuthModal';
 import SavedTripsDisplay from './components/SavedTripsDisplay';
+import PremiumModal from './components/PremiumModal';
 import {
   fetchDatatourismePois,
   fetchHotelSuggestionsFromApi,
@@ -20,8 +21,11 @@ import {
   deleteUserSavedTrip
 } from './services/api';
 
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+
 function App() {
-  // ... (all existing state up to here) ...
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [searchedLocations, setSearchedLocations] = useState([]);
@@ -42,14 +46,41 @@ function App() {
   const [isLoadingDestination, setIsLoadingDestination] = useState(false);
   const [isLoadingNewLocation, setIsLoadingNewLocation] = useState(false);
 
-  // New state for POI Panel minimization
   const [isPoiPanelMinimized, setIsPoiPanelMinimized] = useState(false);
+
+  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const [paymentStatusMessage, setPaymentStatusMessage] = useState('');
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const paymentStatus = queryParams.get('payment_status');
+    const stripeSessionId = queryParams.get('stripe_session_id');
+
+    if (paymentStatus === 'success') {
+      setPaymentStatusMessage('Payment successful! Thank you for subscribing to Premium.');
+      console.log('Stripe Session ID for verification (optional):', stripeSessionId);
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (paymentStatus === 'cancelled') {
+      setPaymentStatusMessage('Payment cancelled. Your subscription was not processed.');
+
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+
+    if (paymentStatus) {
+        const timer = setTimeout(() => {
+            setPaymentStatusMessage('');
+        }, 7000); 
+        return () => clearTimeout(timer);
+    }
+  }, []);
+
 
   const togglePoiPanelMinimize = () => {
     setIsPoiPanelMinimized(prev => !prev);
   };
 
-  // ... (rest of your functions: addWaypoint, removeWaypoint, etc.)
   const addWaypoint = (poi) => {
     if (!poi || (!poi.originalId && !poi.placeId)) {
         console.error("App.js: Waypoint is missing originalId or placeId", poi);
@@ -79,19 +110,19 @@ function App() {
       alert("Please set an origin and destination first.");
       return;
     }
-    setDirectionsResponse(null); 
-    setIsTripModalOpen(false); 
+    setDirectionsResponse(null);
+    setIsTripModalOpen(false);
   };
-  
+
   const updateLocationPois = (locationId, data, isLoading = false, error = null, searchCategory = 'poi') => {
     setSearchedLocations(prevLocations =>
       prevLocations.map(loc =>
-        loc.id === locationId ? { 
-          ...loc, 
-          pois: data?.pois || [], 
-          isLoading, 
-          error: error?.message || null, 
-          category: searchCategory 
+        loc.id === locationId ? {
+          ...loc,
+          pois: data?.pois || [],
+          isLoading,
+          error: error?.message || null,
+          category: searchCategory
         } : loc
       )
     );
@@ -109,7 +140,7 @@ function App() {
     setSearchedLocations(prev => prev.map(loc => loc.id === locationId ? {...loc, isLoading: true, error: null, pois: [], category: category} : loc));
 
     let apiCallFunction;
-    const params = { limit: 20 }; 
+    const params = { limit: 20 };
 
     if (searchQuery.trim()) {
         params.search = searchQuery.trim();
@@ -129,16 +160,16 @@ function App() {
         apiCallFunction = fetchBarSuggestionsFromApi;
         break;
       case 'events':
-        params.locality = locationName; 
+        params.locality = locationName;
         apiCallFunction = fetchEnjoySuggestionsFromDb;
         break;
       case 'transport':
-        params.locality = locationName; 
+        params.locality = locationName;
         apiCallFunction = fetchTravelSuggestionsFromDb;
         break;
       case 'poi':
       default:
-        params.locality = locationName; 
+        params.locality = locationName;
         apiCallFunction = fetchDatatourismePois;
         break;
     }
@@ -150,37 +181,37 @@ function App() {
       updateLocationPois(locationId, null, false, err, category);
     }
   };
-  
+
   const findOrCreateLocationEntry = (name, id, category = 'poi') => {
     const trimmedName = name.trim();
     setSearchedLocations(prev => {
       const existingEntryIndex = prev.findIndex(l => l.id === id);
-      
-      if (!trimmedName) { 
+
+      if (!trimmedName) {
         if (id === 'origin' || id === 'destination') {
           const entryToUpdate = prev.find(l => l.id === id);
-          if (entryToUpdate) { 
+          if (entryToUpdate) {
             return prev.map(l => l.id === id ? {...l, name: '', pois: [], isLoading: false, error: null} : l);
           }
         }
-        return prev; 
+        return prev;
       }
 
-      if (existingEntryIndex > -1) { 
+      if (existingEntryIndex > -1) {
         const currentEntry = prev[existingEntryIndex];
         const poisToKeep = (currentEntry.name === trimmedName && currentEntry.category === category) ? currentEntry.pois : [];
-        const updatedEntry = { 
-          ...currentEntry, 
-          name: trimmedName, 
-          category, 
-          pois: poisToKeep, 
+        const updatedEntry = {
+          ...currentEntry,
+          name: trimmedName,
+          category,
+          pois: poisToKeep,
           isLoading: (currentEntry.name === trimmedName && currentEntry.category === category) ? currentEntry.isLoading : false,
           error: (currentEntry.name === trimmedName && currentEntry.category === category) ? currentEntry.error : null,
         };
         const newLocations = [...prev];
         newLocations[existingEntryIndex] = updatedEntry;
         return newLocations;
-      } else { 
+      } else {
         const newEntry = { id, name: trimmedName, pois: [], isLoading: false, error: null, category };
         if (id === 'origin') return [newEntry, ...prev.filter(l => l.id !== 'origin')];
         if (id === 'destination') {
@@ -196,28 +227,28 @@ function App() {
 
   const handleSetOrigin = (locationName) => {
     const newOriginName = locationName.trim();
-    setOrigin(newOriginName); 
+    setOrigin(newOriginName);
     const currentOriginEntry = searchedLocations.find(l => l.id === 'origin');
-    const currentCategory = currentOriginEntry?.category || 'poi'; 
-    
+    const currentCategory = currentOriginEntry?.category || 'poi';
+
     if (!newOriginName) {
         setSearchedLocations(prev => prev.map(l => l.id === 'origin' ? {...l, name: '', pois: [], isLoading: false, error: null} : l));
-        if (activeTabId === 'origin') { 
+        if (activeTabId === 'origin') {
             const destTab = searchedLocations.find(l => l.id === 'destination' && l.name);
             const firstCustomTab = searchedLocations.find(l => l.id !== 'origin' && l.id !== 'destination' && l.name);
             setActiveTabId(destTab ? 'destination' : (firstCustomTab ? firstCustomTab.id : (searchedLocations.length > 1 ? searchedLocations.filter(l => l.id !== 'origin')[0].id : '')));
         }
     } else {
         findOrCreateLocationEntry(newOriginName, 'origin', currentCategory);
-        setActiveTabId('origin'); 
+        setActiveTabId('origin');
     }
   };
 
   const handleSetDestination = (locationName) => {
     const newDestName = locationName.trim();
-    setDestination(newDestName); 
+    setDestination(newDestName);
     const currentDestEntry = searchedLocations.find(l => l.id === 'destination');
-    const currentCategory = currentDestEntry?.category || 'poi'; 
+    const currentCategory = currentDestEntry?.category || 'poi';
 
     if (!newDestName) {
         setSearchedLocations(prev => prev.map(l => l.id === 'destination' ? {...l, name: '', pois: [], isLoading: false, error: null} : l));
@@ -228,17 +259,17 @@ function App() {
         }
     } else {
         findOrCreateLocationEntry(newDestName, 'destination', currentCategory);
-        setActiveTabId('destination'); 
+        setActiveTabId('destination');
     }
   };
 
   const handleFetchForOrigin = async (locationName, category, searchQuery) => {
-    const trimmedName = locationName.trim(); 
+    const trimmedName = locationName.trim();
     if (!trimmedName) return;
 
     setIsLoadingOrigin(true);
-    setOrigin(trimmedName); 
-    findOrCreateLocationEntry(trimmedName, 'origin', category); 
+    setOrigin(trimmedName);
+    findOrCreateLocationEntry(trimmedName, 'origin', category);
     setActiveTabId('origin');
     try {
       await handleFetchPoisGeneric(trimmedName, 'origin', category, searchQuery);
@@ -252,8 +283,8 @@ function App() {
     if (!trimmedName) return;
 
     setIsLoadingDestination(true);
-    setDestination(trimmedName); 
-    findOrCreateLocationEntry(trimmedName, 'destination', category); 
+    setDestination(trimmedName);
+    findOrCreateLocationEntry(trimmedName, 'destination', category);
     setActiveTabId('destination');
     try {
       await handleFetchPoisGeneric(trimmedName, 'destination', category, searchQuery);
@@ -268,10 +299,10 @@ function App() {
 
     setIsLoadingNewLocation(true);
 
-    const existingCustomLocation = searchedLocations.find(loc => 
-        loc.name.toLowerCase() === trimmedLocationName.toLowerCase() && 
-        loc.category === category && 
-        !['origin', 'destination'].includes(loc.id) 
+    const existingCustomLocation = searchedLocations.find(loc =>
+        loc.name.toLowerCase() === trimmedLocationName.toLowerCase() &&
+        loc.category === category &&
+        !['origin', 'destination'].includes(loc.id)
     );
 
     let targetId;
@@ -284,7 +315,7 @@ function App() {
           { id: targetId, name: trimmedLocationName, pois: [], isLoading: false, error: null, category: category }
         ]);
     }
-    
+
     setActiveTabId(targetId);
     try {
       await handleFetchPoisGeneric(trimmedLocationName, targetId, category, searchQuery);
@@ -296,7 +327,7 @@ function App() {
   const removeSearchTab = (locationIdToRemove) => {
     setSearchedLocations(prevLocations => {
         const remainingLocations = prevLocations.filter(loc => loc.id !== locationIdToRemove);
-        
+
         if (activeTabId === locationIdToRemove) {
             let newActiveTabId = '';
             const originTabExists = remainingLocations.some(l => l.id === 'origin' && l.name.trim());
@@ -313,16 +344,16 @@ function App() {
     if (locationIdToRemove === 'origin') setOrigin('');
     if (locationIdToRemove === 'destination') setDestination('');
   };
-  
+
   useEffect(() => {
     const activeTab = searchedLocations.find(loc => loc.id === activeTabId);
     const activeTabIsValid = activeTab && activeTab.name.trim();
 
     if (searchedLocations.length > 0) {
-        if (!activeTabId || !activeTabIsValid) { 
+        if (!activeTabId || !activeTabIsValid) {
             const originTab = searchedLocations.find(loc => loc.id === 'origin' && loc.name.trim());
             const destTab = searchedLocations.find(loc => loc.id === 'destination' && loc.name.trim());
-            const firstValidCustomTab = searchedLocations.find(loc => 
+            const firstValidCustomTab = searchedLocations.find(loc =>
                 loc.id !== 'origin' && loc.id !== 'destination' && loc.name.trim()
             );
             const firstAnyValidTab = searchedLocations.find(loc => loc.name.trim());
@@ -331,11 +362,11 @@ function App() {
             if (originTab) setActiveTabId('origin');
             else if (destTab) setActiveTabId('destination');
             else if (firstValidCustomTab) setActiveTabId(firstValidCustomTab.id);
-            else if (firstAnyValidTab) setActiveTabId(firstAnyValidTab.id); 
-            else if (searchedLocations.length > 0) setActiveTabId(searchedLocations[0].id); 
-            else setActiveTabId(''); 
+            else if (firstAnyValidTab) setActiveTabId(firstAnyValidTab.id);
+            else if (searchedLocations.length > 0) setActiveTabId(searchedLocations[0].id);
+            else setActiveTabId('');
         }
-    } else if (searchedLocations.length === 0 && activeTabId) { 
+    } else if (searchedLocations.length === 0 && activeTabId) {
         setActiveTabId('');
     }
   }, [searchedLocations, activeTabId]);
@@ -380,7 +411,7 @@ function App() {
 
   useEffect(() => {
     if (currentUser && currentUser.userId) {
-      fetchUserSavedTrips(currentUser.userId)
+      fetchUserSavedTrips(currentUser.userId, currentUser.token) 
         .then(data => setSavedTrips(data.trips || []))
         .catch(err => {
             console.error("Failed to fetch saved trips:", err);
@@ -394,7 +425,7 @@ function App() {
   const handleLogin = async (credentials) => {
     try {
       const userData = await loginUser(credentials);
-      const userToStore = { userId: userData.userId, username: userData.username };
+      const userToStore = { userId: userData.userId, username: userData.username, token: userData.token };
       setCurrentUser(userToStore);
       localStorage.setItem('epicRoadTripUser', JSON.stringify(userToStore));
       setIsAuthModalOpen(false);
@@ -426,7 +457,7 @@ function App() {
     setIsLoadingOrigin(false);
     setIsLoadingDestination(false);
     setIsLoadingNewLocation(false);
-    setIsPoiPanelMinimized(false); // Reset panel state on logout
+    setIsPoiPanelMinimized(false);
   };
 
   const handleSaveCurrentTrip = async (tripName) => {
@@ -445,14 +476,14 @@ function App() {
       origin,
       destination,
       waypoints: selectedWaypoints.map(wp => ({
-        originalId: wp.originalId || wp.placeId, 
+        originalId: wp.originalId || wp.placeId,
         name: wp.name,
         dataSource: wp.dataSource,
-        location: wp.location 
+        location: wp.location
       })),
     };
     try {
-      const result = await saveUserTrip(tripData, currentUser.userId);
+      const result = await saveUserTrip(tripData, currentUser.userId, currentUser.token);
       setSavedTrips(prevTrips => [...prevTrips, result.trip]);
       alert("Trip saved!");
     } catch (error)
@@ -465,8 +496,8 @@ function App() {
     setOrigin(trip.origin);
     setDestination(trip.destination);
     setSelectedWaypoints(trip.waypoints.map(wp => ({
-        ...wp, 
-        placeId: wp.placeId || wp.originalId, 
+        ...wp,
+        placeId: wp.placeId || wp.originalId,
         originalId: wp.originalId || wp.placeId
     })));
 
@@ -478,26 +509,92 @@ function App() {
         newSearchedLocations.push({id: 'destination', name: trip.destination, pois: [], isLoading: false, error: null, category: 'poi'});
     }
     setSearchedLocations(newSearchedLocations);
-    
-    setDirectionsResponse(null); 
+
+    setDirectionsResponse(null);
     setIsSavedTripsModalOpen(false);
-    setIsPoiPanelMinimized(false); // Ensure panel is open when loading a trip
+    setIsPoiPanelMinimized(false);
   };
 
   const handleDeleteSavedTrip = async (tripId) => {
     if (!currentUser || !window.confirm("Are you sure you want to delete this trip?")) return;
     try {
-        await deleteUserSavedTrip(tripId, currentUser.userId);
+        await deleteUserSavedTrip(tripId, currentUser.userId, currentUser.token);
         setSavedTrips(prev => prev.filter(trip => trip._id !== tripId));
     } catch (error) {
         alert(`Failed to delete trip: ${error.message}`);
     }
   };
 
-  const isAPrimaryModalOpen = isTripModalOpen || isSavedTripsModalOpen || isAuthModalOpen;
+
+  const handleProceedToPayment = async () => {
+    if (!currentUser) {
+      alert("Please log in to subscribe to the Premium Plan.");
+      setIsPremiumModalOpen(false);
+      setAuthMode('login');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: currentUser.userId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Payment session creation failed.');
+      }
+
+      const session = await response.json();
+      const stripe = await stripePromise;
+
+      if (!stripe) {
+        console.error("Stripe.js has not loaded yet.");
+        throw new Error("Payment system is not ready. Please try again in a moment.");
+      }
+
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: session.id,
+      });
+
+      if (error) {
+        console.error('Stripe redirectToCheckout error:', error);
+        alert(`Payment Error: ${error.message}`);
+      }
+    } catch (err) {
+      console.error('Error during payment process:', err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setIsProcessingPayment(false); 
+    }
+  };
+
+  const isAPrimaryModalOpen = isTripModalOpen || isSavedTripsModalOpen || isAuthModalOpen || isPremiumModalOpen;
 
   return (
     <div className="relative h-full w-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      {paymentStatusMessage && (
+        <div
+          className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md p-4 mt-4 text-center text-white rounded-md shadow-lg z-[2000] ${
+            paymentStatusMessage.includes('successful') ? 'bg-green-500' : 'bg-red-500'
+          }`}
+        >
+          {paymentStatusMessage}
+          <button
+            onClick={() => setPaymentStatusMessage('')}
+            className="absolute top-1 right-2 text-white hover:text-gray-200 text-2xl font-bold"
+            aria-label="Close notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div className="absolute inset-0 z-0">
         <MapDisplay
           origin={origin}
@@ -522,7 +619,6 @@ function App() {
         isLoadingNewLocation={isLoadingNewLocation}
       />
 
-      {/* Conditionally render PoiDisplayPanel */}
       {searchedLocations.length > 0 && !isAPrimaryModalOpen && (
         <PoiDisplayPanel
           searchedLocations={searchedLocations}
@@ -530,13 +626,12 @@ function App() {
           setActiveTabId={setActiveTabId}
           onRemoveSearchTab={removeSearchTab}
           onAddWaypoint={addWaypoint}
-          // New props for minimization
           isMinimized={isPoiPanelMinimized}
           onToggleMinimize={togglePoiPanelMinimize}
         />
       )}
 
-      <div className="fixed top-5 right-5 z-[1000] flex gap-3 items-center">
+      <div className="fixed top-5 right-5 z-[1000] flex gap-3 items-center flex-wrap">
         <button onClick={() => setIsTripModalOpen(true)} className="btn-secondary !py-2 !px-4 text-sm">
           Current Trip ({selectedWaypoints.length})
         </button>
@@ -545,6 +640,12 @@ function App() {
                 Saved Trips ({savedTrips.length})
             </button>
         )}
+        <button
+          onClick={() => setIsPremiumModalOpen(true)}
+          className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium py-2 px-4 rounded-lg transition-colors text-sm shadow-sm hover:shadow-md"
+        >
+          Premium Plan
+        </button>
         {!currentUser ? (
           <button
             onClick={() => { setAuthMode('login'); setIsAuthModalOpen(true); }}
@@ -568,6 +669,14 @@ function App() {
           onLogin={handleLogin}
           onRegister={handleRegister}
           onClose={() => setIsAuthModalOpen(false)}
+        />
+      )}
+
+      {isPremiumModalOpen && (
+        <PremiumModal
+          onClose={() => setIsPremiumModalOpen(false)}
+          onProceedToPayment={handleProceedToPayment}
+          isLoadingPayment={isProcessingPayment}
         />
       )}
 

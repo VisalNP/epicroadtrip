@@ -1,4 +1,3 @@
-// src/components/PoiDisplayPanel.js
 import React from 'react';
 import { CATEGORY_OPTIONS } from '../constants/appConstants';
 
@@ -8,8 +7,8 @@ function PoiDisplayPanel({
   setActiveTabId,
   onRemoveSearchTab,
   onAddWaypoint,
-  isMinimized,       // New prop
-  onToggleMinimize,  // New prop
+  isMinimized,       
+  onToggleMinimize,  
 }) {
   const activeLocationData = searchedLocations.find(loc => loc.id === activeTabId);
   const poisToDisplay = activeLocationData ? activeLocationData.pois : [];
@@ -46,7 +45,6 @@ function PoiDisplayPanel({
 
       {!isMinimized && (
         <>
-          {/* Tabs Section: fixed height, horizontal scroll if needed */}
           <div className="flex border-b border-brand-border mb-3 flex-shrink-0 -mx-1 px-1 overflow-x-auto">
             {searchedLocations.map(loc => (
               <button
@@ -68,7 +66,6 @@ function PoiDisplayPanel({
             ))}
           </div>
 
-          {/* POI List / Messages Section: takes remaining space and scrolls its own content */}
           <div className="flex-grow flex flex-col min-h-0 overflow-y-auto">
             {isLoading && <p className="text-brand-text-secondary text-center mt-5 p-2.5 flex-shrink-0">Loading {currentTabCategoryDisplay} for {currentTabName}...</p>}
             {error && <p className="text-red-500 text-center mt-5 p-2.5 flex-shrink-0">Error: {error}</p>}

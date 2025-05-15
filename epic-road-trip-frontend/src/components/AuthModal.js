@@ -1,6 +1,4 @@
-// src/components/AuthModal.js
 import React, { useState } from 'react';
-// import { X } from 'react-feather'; // Example for close icon
 
 function AuthModal({ mode, setMode, onLogin, onRegister, onClose }) {
   const [username, setUsername] = useState('');
@@ -39,8 +37,8 @@ function AuthModal({ mode, setMode, onLogin, onRegister, onClose }) {
             <label htmlFor="username-auth" className="block text-sm font-medium text-brand-text-secondary mb-1">Username</label>
             <input
               type="text"
-              id="username-auth" // Changed id to be more specific
-              className="input-field" // Using .input-field from index.css
+              id="username-auth" 
+              className="input-field" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -50,7 +48,7 @@ function AuthModal({ mode, setMode, onLogin, onRegister, onClose }) {
             <label htmlFor="password-auth" className="block text-sm font-medium text-brand-text-secondary mb-1">Password</label>
             <input
               type="password"
-              id="password-auth" // Changed id
+              id="password-auth" 
               className="input-field"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -59,7 +57,7 @@ function AuthModal({ mode, setMode, onLogin, onRegister, onClose }) {
           </div>
           <button 
             type="submit" 
-            className="btn-primary w-full" // Using .btn-primary from index.css
+            className="btn-primary w-full" 
           >
             {mode === 'login' ? 'Login' : 'Create Account'}
           </button>

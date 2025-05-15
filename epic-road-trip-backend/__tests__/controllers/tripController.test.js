@@ -1,7 +1,6 @@
-// __tests__/controllers/tripController.test.js
 const tripController = require('../../controllers/tripController');
 const User = require('../../models/userModel');
-const mongoose = require('mongoose'); // The mocked version
+const mongoose = require('mongoose');
 
 jest.mock('../../models/userModel');
 
@@ -33,34 +32,23 @@ describe('Trip Controller', () => {
         const idString = String(id);
         return /^[0-9a-fA-F]{24}$/.test(idString) || idString.startsWith('mockTripId') || idString.startsWith('mockObjectId');
     });
-    // This mock should return a string because that's what .toString() would do.
     mongoose.Types.ObjectId.mockImplementation(() => ({ 
         toString: () => generateMockTripId(),
         equals: function(other) { return other && other.toString() === this.toString(); } 
     }));
 
 
-    // User.findById mock in beforeEach
-    // This is crucial: User.findById should return a NEW chainable object each time
-    // The global mongoose mock's `createChainable` handles this if User is a MockModel
-    // Let's re-ensure User.findById itself is mocked to return a new chain.
     User.findById.mockImplementation((userIdQuery) => {
-        // This is a simplified version assuming the global mock already makes User.findById return a chain.
-        // If User.findById itself is what you get from `mongoose.model('User', schema)`,
-        // then its static methods like `findById` should already be returning new chains.
-        // The issue might be if `User.findById` itself is not the mocked static method.
-
-        // Let's be explicit:
-        const mockUserInstanceForChain = { // A generic user instance for the chain to resolve with
-            _id: userIdQuery, // Use the queried ID
+        const mockUserInstanceForChain = {
+            _id: userIdQuery, 
             savedTrips: [],
-            save: jest.fn().mockResolvedValueThis(), // Or mockResolvedValue(this instance)
+            save: jest.fn().mockResolvedValueThis(), 
         };
 
         const chain = {
             select: jest.fn().mockReturnThis(),
             lean: jest.fn().mockReturnThis(), 
-            exec: jest.fn().mockResolvedValue(userIdQuery === validUserId ? mockUserInstanceForChain : null), // Default exec
+            exec: jest.fn().mockResolvedValue(userIdQuery === validUserId ? mockUserInstanceForChain : null), 
             then: function(onFulfilled, onRejected) { 
                 return this.exec().then(onFulfilled, onRejected);
             },
@@ -114,15 +102,12 @@ describe('Trip Controller', () => {
       mockUserInstance.save.mockResolvedValue(mockUserInstance); 
 
       mockUserInstance.savedTrips.push = jest.fn(function(tripData) {
-        // Create a mock ObjectId string for the new trip
-        const newTripIdObject = new mongoose.Types.ObjectId(); // This calls our mock
-        const newTrip = { ...tripData, _id: newTripIdObject }; // Store the object-like ID
+        const newTripIdObject = new mongoose.Types.ObjectId();
+        const newTrip = { ...tripData, _id: newTripIdObject }; 
         this[this.length] = newTrip;
         return newTrip;
       });
 
-      // For saveTrip, the controller directly awaits User.findById(userId)
-      // So, User.findById needs to resolve directly to mockUserInstance
       User.findById.mockResolvedValue(mockUserInstance); 
 
       await saveTripHandler(mockReq, mockRes);
@@ -141,7 +126,7 @@ describe('Trip Controller', () => {
         message: 'Trip saved successfully',
         trip: expect.objectContaining({ 
             name: 'My Awesome Trip', 
-            _id: pushedTrip._id // This will be the mock ObjectId object
+            _id: pushedTrip._id 
         })
       }));
     });
@@ -156,7 +141,7 @@ describe('Trip Controller', () => {
     it('should return 404 if user not found', async () => {
       mockReq.userId = 'invalidUserId';
       mockReq.body = { origin: 'City A', destination: 'City B' };
-      User.findById.mockResolvedValue(null); // findById resolves to null
+      User.findById.mockResolvedValue(null);
 
       await saveTripHandler(mockReq, mockRes);
 
@@ -175,7 +160,7 @@ describe('Trip Controller', () => {
           save: jest.fn().mockRejectedValue(error),
       };
       mockUserWithError.savedTrips.push = jest.fn();
-      User.findById.mockResolvedValue(mockUserWithError); // findById resolves to the user
+      User.findById.mockResolvedValue(mockUserWithError); 
 
       await saveTripHandler(mockReq, mockRes);
 
@@ -195,7 +180,7 @@ describe('Trip Controller', () => {
             const newTrip = { ...tripData, _id: newTripIdObject };
             this[this.length] = newTrip; return newTrip;
         });
-        User.findById.mockResolvedValue(mockUserInstance); // findById resolves to the user
+        User.findById.mockResolvedValue(mockUserInstance);
 
         await saveTripHandler(mockReq, mockRes);
         expect(mockUserInstance.savedTrips.push).toHaveBeenCalledWith(expect.objectContaining({
@@ -210,10 +195,7 @@ describe('Trip Controller', () => {
     it('should fetch saved trips for a user', async () => {
       const tripsData = [{ name: 'Trip 1', _id: 'tripId1' }, { name: 'Trip 2', _id: 'tripId2' }];
       const mockUserWithTrips = { _id: validUserId, savedTrips: tripsData };
-
-      // User.findById() in the controller returns a chain.
-      // So, we get the chain instance and configure its exec.
-      const mockChainReturnedByFindById = User.findById(validUserId); // Call User.findById() to get the chain
+      const mockChainReturnedByFindById = User.findById(validUserId); 
       mockChainReturnedByFindById.exec.mockResolvedValue(mockUserWithTrips);
 
       await getSavedTripsHandler(mockReq, mockRes);
@@ -237,7 +219,7 @@ describe('Trip Controller', () => {
     it('should return 404 if user not found for getSavedTrips', async () => {
       mockReq.userId = 'invalidUserId';
       const mockChainReturnedByFindById = User.findById('invalidUserId');
-      mockChainReturnedByFindById.exec.mockResolvedValue(null); // Default behavior from beforeEach might cover this
+      mockChainReturnedByFindById.exec.mockResolvedValue(null); 
 
       await getSavedTripsHandler(mockReq, mockRes);
       
@@ -262,7 +244,6 @@ describe('Trip Controller', () => {
 
   describe('deleteSavedTrip', () => {
     const deleteSavedTripHandler = tripController.deleteSavedTrip[1];
-    // Use the ObjectId mock that returns an object with toString for comparisons
     const tripIdToDeleteObject = new mongoose.Types.ObjectId(); 
     const anotherTripIdObject = new mongoose.Types.ObjectId();
     const tripIdToDeleteString = tripIdToDeleteObject.toString();
@@ -270,12 +251,11 @@ describe('Trip Controller', () => {
 
 
     it('should delete a saved trip successfully', async () => {
-      mockReq.params.tripId = tripIdToDeleteString; // The controller compares with string
+      mockReq.params.tripId = tripIdToDeleteString; 
       
       const mockUserInstance = {
         _id: validUserId,
         savedTrips: [
-            // Store the mock ObjectId objects in the array
             { _id: tripIdToDeleteObject, name: 'Trip to delete' },
             { _id: anotherTripIdObject, name: 'Another trip' }
         ],
@@ -288,8 +268,6 @@ describe('Trip Controller', () => {
       await deleteSavedTripHandler(mockReq, mockRes);
 
       expect(User.findById).toHaveBeenCalledWith(validUserId);
-      // After filter: user.savedTrips = user.savedTrips.filter(trip => trip._id.toString() !== tripId);
-      // The trip._id is our mock ObjectId, its .toString() will be called.
       expect(mockUserInstance.savedTrips.length).toBe(1); 
       expect(mockUserInstance.savedTrips[0]._id.toString()).toBe(anotherTripIdString);
       expect(mockUserInstance.save).toHaveBeenCalled();
@@ -309,7 +287,7 @@ describe('Trip Controller', () => {
     it('should return 404 if user not found for delete', async () => {
         mockReq.userId = 'unknownUser';
         mockReq.params.tripId = tripIdToDeleteString;
-        User.findById.mockResolvedValue(null); // findById resolves to null
+        User.findById.mockResolvedValue(null); 
         mongoose.Types.ObjectId.isValid.mockReturnValue(true);
 
         await deleteSavedTripHandler(mockReq, mockRes);
@@ -326,7 +304,7 @@ describe('Trip Controller', () => {
             save: jest.fn(),
         };
         mockUserInstance.save.mockResolvedValue(mockUserInstance);
-        User.findById.mockResolvedValue(mockUserInstance); // findById resolves to user
+        User.findById.mockResolvedValue(mockUserInstance); 
         mongoose.Types.ObjectId.isValid.mockReturnValue(true);
 
         await deleteSavedTripHandler(mockReq, mockRes);
@@ -342,7 +320,7 @@ describe('Trip Controller', () => {
             savedTrips: [{ _id: tripIdToDeleteObject, name: 'Trip to delete' }],
             save: jest.fn().mockRejectedValue(error),
         };
-        User.findById.mockResolvedValue(mockUserInstance); // findById resolves to user
+        User.findById.mockResolvedValue(mockUserInstance);
         mongoose.Types.ObjectId.isValid.mockReturnValue(true);
 
         await deleteSavedTripHandler(mockReq, mockRes);

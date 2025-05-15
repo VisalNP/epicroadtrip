@@ -20,9 +20,7 @@ async function getGooglePlacesByType(req, res, googlePlaceType) {
   }
 
   try {
-    // The third argument to findPlaces in googleApiHelper was `placeType`, but it was commented out.
-    // Sending `locationBias` as the second effective argument for it.
-    const googleResults = await findPlaces(queryForGoogle, locationBias /*, googlePlaceType - if helper uses it */);
+    const googleResults = await findPlaces(queryForGoogle, locationBias);
 
     const totalFromThisFetch = googleResults.length;
     const startIndex = (parseInt(page) - 1) * parseInt(limit);

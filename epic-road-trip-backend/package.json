@@ -23,7 +23,8 @@
     "jsonstream": "^1.0.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.2",
-    "puppeteer": "^24.8.2"
+    "puppeteer": "^24.8.2",
+    "stripe": "^18.1.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",

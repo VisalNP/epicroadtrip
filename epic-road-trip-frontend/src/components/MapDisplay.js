@@ -1,4 +1,3 @@
-// src/components/MapDisplay.js
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
 
@@ -12,8 +11,8 @@ const initialMapProps = {
   zoom: 6
 };
 
-const SCRIPT_LIBRARIES = ['places', 'routes']; // 'routes' is not a standard library, usually 'directions' is part of core or places.
-                                              // Keeping as is, assuming it worked. DirectionsService should work without it.
+const SCRIPT_LIBRARIES = ['places', 'routes']; 
+                                              
 
 function MapDisplay({
   origin,
@@ -23,13 +22,13 @@ function MapDisplay({
   directionsResponse,
   setDirectionsResponse
 }) {
-  // ... (keep console.logs if debugging, or remove)
+
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
-    libraries: SCRIPT_LIBRARIES.filter(lib => lib !== 'routes'), // Filter out 'routes' if it causes issues, typically not a library name.
-                                                                 // Standard libraries: 'drawing', 'geometry', 'localContext', 'places', 'visualization'
+    libraries: SCRIPT_LIBRARIES.filter(lib => lib !== 'routes'), 
+                                                                 
   });
 
   const [map, setMap] = useState(null);
@@ -42,7 +41,7 @@ function MapDisplay({
     if (isLoaded && window.google && status === window.google.maps.DirectionsStatus.OK && response) {
       console.log("MapDisplay: DirectionsService callback OK:", response);
       setDirectionsResponse(response);
-      directionsJustRendered.current = true; // Set flag when new directions are rendered
+      directionsJustRendered.current = true; 
     } else {
       console.error(`MapDisplay: Directions request failed. Status: ${status}`, response);
       setDirectionsResponse(null);
@@ -70,8 +69,6 @@ function MapDisplay({
 
   const handleIdle = () => {
     if (map) {
-        // If directions were just rendered, the map likely panned/zoomed to fit the route.
-        // Capture this new center/zoom.
         if (directionsJustRendered.current) {
             const newCenter = map.getCenter();
             const newZoom = map.getZoom();
@@ -81,9 +78,8 @@ function MapDisplay({
             if (newZoom) {
                 setCurrentZoom(newZoom);
             }
-            directionsJustRendered.current = false; // Reset flag
+            directionsJustRendered.current = false; 
         } else {
-            // Otherwise, it's user interaction, update center/zoom as before.
             const newCenter = map.getCenter();
             const newZoom = map.getZoom();
             if (newCenter) {
@@ -149,11 +145,6 @@ function MapDisplay({
               }}
               title={`${poi.name} (${poi.dataSource})`}
               onClick={() => setSelectedPoi(poi)}
-              // Example: Custom icon (optional)
-              // icon={{
-              //   url: poi.dataSource === 'google-places' ? '/path/to/google-icon.png' : '/path/to/db-icon.png',
-              //   scaledSize: new window.google.maps.Size(30, 30)
-              // }}
             />
           );
         } else {
@@ -169,7 +160,7 @@ function MapDisplay({
           }}
           onCloseClick={() => setSelectedPoi(null)}
         >
-          <div className="p-1 text-gray-800"> {/* InfoWindows often need their own styling or inherit from Google Maps' default */}
+          <div className="p-1 text-gray-800"> 
             <h3 className="text-md font-semibold mb-1">{selectedPoi.name} ({selectedPoi.dataSource})</h3>
             <p className="text-xs mb-1">{selectedPoi.shortDescription || selectedPoi.description || 'No description'}</p>
             {selectedPoi.addressString && <p className="text-xs text-gray-600"><small>{selectedPoi.addressString}</small></p>}
@@ -179,7 +170,7 @@ function MapDisplay({
 
       {isLoaded && origin && destination && (
         <DirectionsService
-          key={`${origin}-${destination}-${googleMapWaypoints.length}-${Date.now()}`} // Key change to force re-fetch if waypoints content changes by reference but not length
+          key={`${origin}-${destination}-${googleMapWaypoints.length}-${Date.now()}`} 
           options={{
             destination: destination,
             origin: origin,
@@ -195,10 +186,10 @@ function MapDisplay({
         <DirectionsRenderer
           options={{
             directions: directionsResponse,
-            preserveViewport: true, // Set to false to allow map to pan/zoom to fit the route
-            suppressMarkers: true, // Optionally suppress default A/B markers if you place your own
+            preserveViewport: true, 
+            suppressMarkers: true,
             polylineOptions: {
-              strokeColor: "#007bff", // Example: Blue route line
+              strokeColor: "#007bff",
               strokeOpacity: 0.8,
               strokeWeight: 6
             }

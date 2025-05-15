@@ -1,6 +1,5 @@
-// src/components/Sidebar.js
 import React, { useState } from 'react';
-import { CATEGORY_OPTIONS } from '../constants/appConstants'; // Import shared constants
+import { CATEGORY_OPTIONS } from '../constants/appConstants'; 
 
 function Sidebar({
   origin,
@@ -10,13 +9,11 @@ function Sidebar({
   onSetDestination,
   onFetchForDestination,
   onAddNewSearchLocation,
-  // Props for individual button loading states, managed by parent
   isLoadingOrigin,
   isLoadingDestination,
   isLoadingNewLocation,
 }) {
   const [newLocationSearch, setNewLocationSearch] = useState('');
-  // selectedCategoryState and searchKeyword are now used for all searches originating from this sidebar
   const [selectedCategoryState, setSelectedCategoryState] = useState(CATEGORY_OPTIONS[0].value);
   const [searchKeyword, setSearchKeyword] = useState('');
 
@@ -25,14 +22,12 @@ function Sidebar({
 
   const handleOriginSearchClick = () => {
     if (origin.trim()) {
-      // Pass current category and keyword for origin search
       onFetchForOrigin(origin, selectedCategoryState, searchKeyword);
     }
   };
 
   const handleDestinationSearchClick = () => {
     if (destination.trim()) {
-      // Pass current category and keyword for destination search
       onFetchForDestination(destination, selectedCategoryState, searchKeyword);
     }
   };
@@ -43,21 +38,20 @@ function Sidebar({
   const handleAddNewLocationTab = () => {
     if (newLocationSearch.trim()) {
       onAddNewSearchLocation(newLocationSearch, selectedCategoryState, searchKeyword);
-      setNewLocationSearch(''); // Clear input after search
+      setNewLocationSearch(''); 
     }
   };
   
-  const commonInputStyles = "input-field"; // Define your input-field class in global CSS
-  const commonButtonStyles = "btn-primary w-full text-sm"; // Define btn-primary in global CSS
+  const commonInputStyles = "input-field"; 
+  const commonButtonStyles = "btn-primary w-full text-sm";
 
   return (
     <div 
       className="absolute top-5 left-5 z-10 w-[380px] max-h-[calc(100vh-40px)]
                  bg-slate-200 bg-opacity-30 backdrop-blur-md p-6 shadow-xl rounded-xl
-                 overflow-y-auto flex flex-col" // Outer container scrolls if its direct children overflow
+                 overflow-y-auto flex flex-col" 
     >
-      <div className="flex flex-col gap-5 flex-shrink-0"> {/* Input sections wrapper */}
-        {/* Origin */}
+      <div className="flex flex-col gap-5 flex-shrink-0"> 
         <div>
           <label htmlFor="origin-loc" className="block text-sm font-medium text-brand-text-secondary mb-1">Origine</label>
           <input
@@ -78,7 +72,6 @@ function Sidebar({
           </button>
         </div>
 
-        {/* Destination */}
         <div>
           <label htmlFor="dest-loc" className="block text-sm font-medium text-brand-text-secondary mb-1">Destination</label>
           <input
@@ -101,7 +94,6 @@ function Sidebar({
 
         <hr className="border-brand-border my-1" />
 
-        {/* New Location Search Section */}
         <div className="flex flex-col gap-3 p-4 bg-brand-blue-light rounded-lg">
             <h3 className="text-md font-semibold text-brand-blue-dark mb-1">Recherche Avancée</h3>  
             <div>
@@ -110,7 +102,7 @@ function Sidebar({
                   id="category-select"
                   value={selectedCategoryState}
                   onChange={(e) => setSelectedCategoryState(e.target.value)}
-                  className={`${commonInputStyles} py-2.5`} // Ensure padding matches input
+                  className={`${commonInputStyles} py-2.5`}
               >
                   {CATEGORY_OPTIONS.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -149,7 +141,6 @@ function Sidebar({
             </button>
         </div>
       </div>
-      {/* Tabs and POI list are no longer here */}
     </div>
   );
 }

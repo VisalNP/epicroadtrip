@@ -1,6 +1,5 @@
-// src/components/TripItineraryDisplay.js
+
 import React, { useState, useEffect } from 'react';
-// import { X, Trash2 } from 'react-feather'; // Example icons
 
 function TripItineraryDisplay({
   origin,
@@ -60,13 +59,12 @@ function TripItineraryDisplay({
       onClick={onClose}
     >
       <div 
-        className="bg-slate-200 bg-opacity-30 backdrop-blur-md card w-[380px] max-h-[90vh] flex flex-col !rounded-r-none !rounded-l-xl" // Override card rounding for sidebar attach
+        className="bg-slate-200 bg-opacity-30 backdrop-blur-md card w-[380px] max-h-[90vh] flex flex-col !rounded-r-none !rounded-l-xl" 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-5 pb-4 border-b border-brand-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-brand-text">Votre voyage actuel</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            {/* <X size={22} /> */} ×
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"> ×
           </button>
         </div>
 
@@ -96,7 +94,7 @@ function TripItineraryDisplay({
                         className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors"
                         title="Supprimer l'arrêt"
                       >
-                        {/* <Trash2 size={16} /> */} Supprimer
+                        Supprimer
                       </button>
                   </li>
                   ))}
@@ -131,7 +129,7 @@ function TripItineraryDisplay({
               />
               <button
                 onClick={handleSave}
-                className="btn-primary w-full !bg-green-500 hover:!bg-green-600" // Specific save color
+                className="btn-primary w-full !bg-green-500 hover:!bg-green-600"
               >
                 Sauvegarder ce voyage
               </button>
